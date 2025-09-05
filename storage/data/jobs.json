@@ -1,0 +1,28 @@
+{
+  "jobs": [
+    {
+      "id": "c15e6775-cda5-40e5-b1ac-5bc66379c5a0",
+      "userId": "2",
+      "sourceId": "seed",
+      "ops": [
+        {
+          "op": "resize",
+          "width": 1920,
+          "height": 1080
+        },
+        {
+          "op": "blur",
+          "sigma": 2
+        },
+        {
+          "op": "sharpen",
+          "sigma": 1
+        }
+      ],
+      "status": "done",
+      "createdAt": "2025-09-04T22:53:56.829Z",
+      "finishedAt": "2025-09-04T22:53:56.921Z",
+      "outputPath": "storage/outputs/c15e6775-cda5-40e5-b1ac-5bc66379c5a0.png"
+    }
+  ]
+}

@@ -27,5 +27,4 @@ COPY storage ./storage
 
 EXPOSE 3000
 
-# ✅ Corrected entrypoint (your build puts server.js under dist/src/)
 CMD ["node", "dist/src/server.js"]
