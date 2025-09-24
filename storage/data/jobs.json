@@ -1,6 +1,30 @@
 {
   "jobs": [
     {
+      "id": "eb3792bd-ed70-4a32-8751-0d4b9fe4e2e2",
+      "userId": "2",
+      "sourceId": "seed",
+      "ops": [
+        {
+          "op": "resize",
+          "width": 1920,
+          "height": 1080
+        },
+        {
+          "op": "blur",
+          "sigma": 2
+        },
+        {
+          "op": "sharpen",
+          "sigma": 1
+        }
+      ],
+      "status": "done",
+      "createdAt": "2025-09-24T03:48:14.440Z",
+      "finishedAt": "2025-09-24T03:48:14.534Z",
+      "outputPath": "storage/outputs/eb3792bd-ed70-4a32-8751-0d4b9fe4e2e2.png"
+    },
+    {
       "id": "c15e6775-cda5-40e5-b1ac-5bc66379c5a0",
       "userId": "2",
       "sourceId": "seed",
