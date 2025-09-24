@@ -22,7 +22,7 @@ Core criteria
 
 ### Deploy the container
 
-- **EC2 instance ID:** i-0d6565d7d06f9ce2b
+- **EC2 instance ID:** Shown in video by running the container on EC2 with docker compose  
 - **Video timestamp:** 00:33 - 01:01
 
 ### User login
@@ -80,11 +80,11 @@ Core criteria
 
 ### CPU load testing
 
-- **One line description:** Bash/Node script launches 20–60 concurrent 8K image jobs to sustain >80% CPU load for over 5 minutes.
+- **One line description:** Bash script pasted directly into the EC2 terminal launches 160+ concurrent 8K image jobs to sustain >80% CPU load for ~5 minutes.  
 - **Video timestamp:** 03:36 - 04:02 & 04:04 - 04:51
 - **Relevant files:**
   - /scripts/load_test.ts
-  - (bash script shown in video)
+  - (script pasted in terminal, not stored in repo) 
 
 Additional criteria
 ------------------------------------------------
