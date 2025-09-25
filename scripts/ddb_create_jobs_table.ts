@@ -2,8 +2,8 @@ import 'dotenv/config';
 import { DynamoDBClient, CreateTableCommand, ResourceInUseException } from "@aws-sdk/client-dynamodb";
 
 const REGION = process.env.AWS_REGION || "ap-southeast-2";
-const qutUser = process.env.QUT_USERNAME!; // e.g. n11594128@qut.edu.au
-const tableName = "n11594128-jobs"; // change prefix to your student id
+const qutUser = process.env.QUT_USERNAME!; 
+const tableName = "a2-n11594128-imgproc-jobs"; 
 
 async function main() {
   const ddb = new DynamoDBClient({ region: REGION });

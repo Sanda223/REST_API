@@ -3,7 +3,7 @@ import { DynamoDBDocumentClient, PutCommand, GetCommand, UpdateCommand, QueryCom
 
 const REGION = process.env.AWS_REGION || "ap-southeast-2";
 const QUT_USERNAME = process.env.QUT_USERNAME!;
-const TABLE = "n11594128-jobs"; // match C1
+const TABLE = process.env.DDB_TABLE || "a2-n11594128-imgproc-jobs";
 
 export type JobStatus = 'waiting_upload' | 'processing' | 'done' | 'failed';
 
