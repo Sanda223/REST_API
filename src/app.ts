@@ -3,6 +3,8 @@ import express from 'express';
 import cors from 'cors';
 // import helmet from 'helmet';
 import morgan from 'morgan';
+import filesRoutes from './routes/files.routes';
+
 
 import authRoutes from './routes/auth.routes';
 import jobRoutes from './routes/jobs.routes';
@@ -30,6 +32,7 @@ export function buildApp() {
   app.use('/v1/auth', authRoutes);
   app.use('/v1/jobs', jobRoutes);
   app.use('/v1/images', imageRoutes);
+  app.use('/v1/files', filesRoutes);
 
   // Error handler (keep last)
   app.use(errorHandler);

@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 const STORE_DIR = join(process.cwd(), 'storage', 'data');
 const STORE_PATH = join(STORE_DIR, 'jobs.json');
 
-export type JobStatus = 'processing' | 'done' | 'failed';
+export type JobStatus = 'waiting_upload' | 'processing' | 'done' | 'failed';
 
 export interface JobRecord {
   id: string;
@@ -15,6 +15,12 @@ export interface JobRecord {
   status: JobStatus;
   createdAt: string;
   finishedAt?: string;
+
+  // NEW for S3-based processing
+  inputKey?: string;   // e.g. "seed/seed.png" or "users/<uid>/jobs/<id>/input"
+  outputKey?: string;  // e.g. "users/<uid>/jobs/<id>/output.png"
+
+  // Legacy (from A1 local file flow) — kept for back-compat
   outputPath?: string; // e.g. storage/outputs/<id>.png
 }
 

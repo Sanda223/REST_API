@@ -23,6 +23,7 @@ initStore().catch(() => { /* best-effort */ });
  * Returns: { id, output: { imageId, url } }
  */
 r.post('/', requireAuth, async (req, res, next) => {
+  let jobId: string | undefined;
   try {
     const { sourceId = 'seed', ops } = req.body || {};
     if (!Array.isArray(ops) || ops.length === 0) {
@@ -30,6 +31,7 @@ r.post('/', requireAuth, async (req, res, next) => {
     }
 
     const id = randomUUID();
+    jobId = id;
     const user = (req as any).user || {};
     const userId = user.sub ?? user.username ?? 'unknown';
 
@@ -45,10 +47,9 @@ r.post('/', requireAuth, async (req, res, next) => {
     await addJob(job);
 
     // 2) run the CPU-intensive pipeline
-    await runPipeline(sourceId, ops, id);
+    const { outputPath } = await runPipeline(sourceId, ops, id);
 
     // 3) mark as done and store output path
-    const outputPath = `storage/outputs/${id}.png`;
     await updateJob(id, {
       status: 'done',
       finishedAt: new Date().toISOString(),
@@ -60,9 +61,12 @@ r.post('/', requireAuth, async (req, res, next) => {
       .json({ id, output: { imageId: id, url: `/v1/images/${id}` } });
   } catch (e) {
     // best-effort: mark as failed if we created an ID above
-    const possibleId = (e as any)?.id ?? undefined;
-    if (possibleId) {
-      await updateJob(possibleId, { status: 'failed' }).catch(() => {});
+    const failedId = jobId ?? (e as any)?.id ?? undefined;
+    if (failedId) {
+      await updateJob(failedId, {
+        status: 'failed',
+        finishedAt: new Date().toISOString(),
+      }).catch(() => {});
     }
     next(e);
   }
