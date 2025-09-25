@@ -1,3 +1,4 @@
+import 'dotenv/config';
 console.log('server: starting');
 
 import { buildApp } from './app';

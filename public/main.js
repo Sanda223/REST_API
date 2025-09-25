@@ -56,9 +56,18 @@ $("#jobForm").addEventListener("submit", async (e) => {
   const data = await res.json();
   jobResultEl.textContent = JSON.stringify(data, null, 2);
 
-  if (res.ok && data.output?.imageId) {
-    const url = `/v1/images/${data.output.imageId}`;
-    output.innerHTML = `<p><a href="${url}" target="_blank">${url}</a></p><img src="${url}" alt="result" />`;
+  if (res.ok) {
+    // Prefer presigned S3 URL if present, fallback to /v1/images/:id
+    const url =
+      data?.output?.url ??
+      (data?.output?.imageId ? `/v1/images/${data.output.imageId}` : null);
+
+    if (url) {
+      // Show only the image preview
+      output.innerHTML = `<img src="${url}" alt="result" />`;
+    } else {
+      output.textContent = "Job created, but no output URL yet.";
+    }
   } else {
     output.textContent = "Job failed.";
   }
