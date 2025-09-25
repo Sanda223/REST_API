@@ -4,14 +4,7 @@ import { randomUUID } from "node:crypto";
 import { requireAuth } from "../middleware/auth";
 import { runPipelineS3 } from "../services/process";
 import { presignUpload, presignDownload } from "../services/s3.service";
-import {
-  initStore,
-  addJob,
-  updateJob,
-  listJobs,
-  getJobById,
-  JobRecord,
-} from "../data/jobs.store";
+import { initStore, addJob, updateJob, listJobs, getJobById, JobRecord } from "../data/jobs.ddb";
 
 const r = Router();
 
