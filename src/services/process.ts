@@ -1,5 +1,6 @@
 import sharp from "sharp";
-import { s3, S3_BUCKET } from "./s3.service";
+import { s3 } from "./s3.service";
+import { Config } from "./config";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 
 type Op =
@@ -24,8 +25,10 @@ async function streamToBuffer(stream: any): Promise<Buffer> {
  * @param outputKey - S3 key for output (e.g. "users/u1/jobs/j1/output.png")
  */
 export async function runPipelineS3(inputKey: string, ops: Op[], outputKey: string) {
+  const bucket = Config.S3_BUCKET; // ✅ now synchronous
+
   // 1) read input from S3
-  const inputObj = await s3.send(new GetObjectCommand({ Bucket: S3_BUCKET, Key: inputKey }));
+  const inputObj = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: inputKey }));
   const inputBuf = await streamToBuffer(inputObj.Body as any);
 
   // 2) run sharp ops
@@ -40,13 +43,12 @@ export async function runPipelineS3(inputKey: string, ops: Op[], outputKey: stri
   // 3) write output to S3
   await s3.send(
     new PutObjectCommand({
-      Bucket: S3_BUCKET,
+      Bucket: bucket,
       Key: outputKey,
       Body: outputBuf,
       ContentType: "image/png",
     })
   );
 
-  // return metadata so jobs.routes can save it
   return { outputKey };
 }

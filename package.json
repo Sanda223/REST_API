@@ -14,15 +14,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.896.0",
     "@aws-sdk/client-dynamodb": "^3.896.0",
     "@aws-sdk/client-s3": "^3.896.0",
     "@aws-sdk/client-ssm": "^3.896.0",
     "@aws-sdk/lib-dynamodb": "^3.896.0",
     "@aws-sdk/s3-request-presigner": "^3.896.0",
+    "aws-jwt-verify": "^5.1.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "helmet": "^6.2.0",
+    "jose": "^6.1.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
     "sharp": "^0.34.3"

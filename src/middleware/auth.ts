@@ -1,28 +1,26 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+// src/middleware/auth.ts
+import { Request, Response, NextFunction } from "express";
+import { verifyIdToken } from "../services/cognito.service";
 
-const USERS = [
-  { id: '1', username: 'admin', password: 'admin123!', role: 'admin' },
-  { id: '2', username: 'alice', password: 'password1', role: 'user' },
-];
-
-const SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
-
-export function issueToken(username: string, password: string) {
-  const u = USERS.find(x => x.username === username && x.password === password);
-  if (!u) return null;
-  return jwt.sign({ sub: u.id, role: u.role, username: u.username }, SECRET, { expiresIn: '2h' });
-}
-
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const hdr = req.headers.authorization || '';
-  if (!hdr.startsWith('Bearer ')) {
-    return res.status(401).json({ error: { code: 'unauthenticated', message: 'Missing Bearer token' }});
-  }
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   try {
-    (req as any).user = jwt.verify(hdr.slice(7), SECRET);
+    const hdr = req.headers.authorization || "";
+    if (!hdr.startsWith("Bearer ")) {
+      return res.status(401).json({ error: { code: "unauthenticated", message: "Missing Bearer token" } });
+    }
+    const token = hdr.slice(7);
+    const payload = await verifyIdToken(token);
+
+    // Typical fields: sub, email, "cognito:username"
+    (req as any).user = {
+      sub: payload.sub,
+      email: payload.email,
+      username: (payload as any)["cognito:username"],
+      payload,
+    };
     next();
-  } catch {
-    return res.status(401).json({ error: { code: 'invalid_token', message: 'Invalid token' }});
+  } catch (e) {
+    return res.status(401).json({ error: { code: "invalid_token", message: "Invalid or expired token" } });
   }
 }
+
