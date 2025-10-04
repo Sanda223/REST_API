@@ -1,86 +1,170 @@
+// public/main.js
 const $ = (s) => document.querySelector(s);
 const authStatus = $("#authStatus");
 const jobResultEl = $("#jobResult");
 const output = $("#output");
 
-let token = localStorage.getItem("jwt") || null;
-
-function renderAuth() {
-  authStatus.textContent = token ? "Logged in ✅" : "Not logged in";
+function clearJobUI() {
+  // Clear any job result / output left from a previous session
+  if (jobResultEl) jobResultEl.textContent = "";
+  if (output) output.innerHTML = "";
+  const jf = document.getElementById("jobForm");
+  if (jf && typeof jf.reset === "function") jf.reset();
 }
 
-// ===== Sign Up =====
+let token = localStorage.getItem("jwt") || null;
+
+function parseJwt(t) {
+  try {
+    const base64Url = t.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return {};
+  }
+}
+
+function isExpired(tok) {
+  if (!tok) return true;
+  const payload = parseJwt(tok);
+  const exp = payload.exp;
+  if (!exp) return true;
+  const now = Math.floor(Date.now() / 1000);
+  return now >= exp;
+}
+
+function ensureTokenFresh() {
+  if (token && isExpired(token)) {
+    localStorage.removeItem("jwt");
+    token = null;
+    clearJobUI();
+    renderAuth();
+  }
+}
+
+function renderAuth() {
+  const loggedIn = !!token && !isExpired(token);
+  if (!loggedIn) {
+    authStatus.textContent = "Not logged in";
+    clearJobUI();
+    return;
+  }
+  authStatus.innerHTML = 'Logged in ✅ &nbsp;<button id="logoutBtn">Logout</button>';
+}
+
+function toast(msg) {
+  // tiny helper
+  console.log(msg);
+  alert(msg);
+}
+
+document.addEventListener("click", (e) => {
+  const target = e.target;
+  if (target && target.id === "logoutBtn") {
+    localStorage.removeItem("jwt");
+    token = null;
+    clearJobUI();
+    renderAuth();
+    toast("Logged out");
+  }
+});
+
+ensureTokenFresh();
+renderAuth();
+
+// ---- SIGN UP ----
 $("#signupForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const body = {
     username: $("#suUsername").value.trim(),
     password: $("#suPassword").value,
-    email: $("#suEmail").value.trim()
+    email: $("#suEmail").value.trim(),
   };
   const res = await fetch("/v1/auth/signup", {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(body)
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
+
   if (res.ok) {
-    alert("Signup successful! Check your email for a confirmation code.");
+    toast("Signup successful! Check email for the confirmation code.");
+    // Prefill confirm form’s username to reduce typing
+    $("#cUsername").value = body.username;
+    $("#cCode").focus();
   } else {
-    const err = await res.json().catch(() => ({}));
-    alert("Signup failed: " + (err.message || res.statusText));
+    const err = await safeJson(res);
+    toast("Signup failed: " + (err?.error?.message ?? res.statusText));
   }
 });
 
-// ===== Confirm =====
+// ---- CONFIRM (email code) ----
 $("#confirmForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const body = {
     username: $("#cUsername").value.trim(),
-    code: $("#cCode").value.trim()
+    code: $("#cCode").value.trim(),
   };
   const res = await fetch("/v1/auth/confirm", {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(body)
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
+
   if (res.ok) {
-    alert("Account confirmed! You can now log in.");
+    toast("Email confirmed! You can now log in.");
+    // Move focus to login form for convenience
+    $("#username").value = body.username;
+    $("#password").focus();
   } else {
-    const err = await res.json().catch(() => ({}));
-    alert("Confirmation failed: " + (err.message || res.statusText));
+    const err = await safeJson(res);
+    toast("Confirm failed: " + (err?.error?.message ?? res.statusText));
   }
 });
 
-// ===== Login =====
+// ---- LOGIN ----
 $("#loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const body = {
     username: $("#username").value.trim(),
-    password: $("#password").value
+    password: $("#password").value,
   };
   const res = await fetch("/v1/auth/login", {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(body)
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
-  const data = await res.json().catch(() => ({}));
-  if (res.ok) {
-    token = data.token; // Cognito IdToken
-    localStorage.setItem("jwt", token);
-    renderAuth();
-  } else {
-    alert("Login failed: " + (data.message || res.statusText));
+
+  if (!res.ok) {
+    const err = await safeJson(res);
+    toast("Login failed: " + (err?.error?.message ?? res.statusText));
+    return;
   }
+  const data = await res.json();
+  token = data.token; // Cognito IdToken
+  localStorage.setItem("jwt", token);
+  clearJobUI(); // ensure no previous user's state lingers
+  renderAuth();
+  toast("Logged in");
 });
 
-// ===== Create Job =====
+// ---- CREATE JOB ----
 $("#jobForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  if (!token) { alert("Login first"); return; }
+  if (!token) {
+    toast("Login first");
+    return;
+  }
 
   const ops = [
     { op: "resize", width: parseInt($("#w").value, 10), height: parseInt($("#h").value, 10) },
     { op: "blur", sigma: parseInt($("#blur").value, 10) },
-    { op: "sharpen", sigma: parseInt($("#sharpen").value, 10) }
+    { op: "sharpen", sigma: parseInt($("#sharpen").value, 10) },
   ];
 
   const body = { sourceId: $("#sourceId").value, ops };
@@ -88,12 +172,21 @@ $("#jobForm").addEventListener("submit", async (e) => {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
+      Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   });
 
-  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    // token is invalid/expired — clear it and update UI
+    localStorage.removeItem("jwt");
+    token = null;
+    clearJobUI();
+    renderAuth();
+    toast("Session expired. Please log in again.");
+  }
+
+  const data = await safeJson(res);
   jobResultEl.textContent = JSON.stringify(data, null, 2);
 
   if (res.ok) {
@@ -104,4 +197,13 @@ $("#jobForm").addEventListener("submit", async (e) => {
   }
 });
 
-renderAuth();
+function safeJson(res) {
+  return res
+    .clone()
+    .json()
+    .catch(() => ({}));
+}
+
+if (!token) {
+  clearJobUI();
+}

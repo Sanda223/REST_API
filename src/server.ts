@@ -1,14 +1,19 @@
 import "dotenv/config";
 import { buildApp } from "./app";
 import { loadConfig } from "./services/config";
+import { initCognitoSecrets } from "./services/cognito.service";
 
 async function main() {
   try {
     console.log("server: starting");
 
-    // Load SSM Parameter Store values once at startup
+    // 1) Load SSM Parameter Store values (S3/DDB)
     await loadConfig();
     console.log("server: config loaded");
+
+    // 2) Load Cognito secrets from Secrets Manager (or env fallback)
+    await initCognitoSecrets();
+    console.log("server: cognito secret loaded");
 
     const app = buildApp();
     console.log("server: app built, about to listen");
