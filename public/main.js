@@ -4,12 +4,15 @@ const authStatus = $("#authStatus");
 const jobResultEl = $("#jobResult");
 const output = $("#output");
 
+let lastJobId = null;
+
 function clearJobUI() {
   // Clear any job result / output left from a previous session
   if (jobResultEl) jobResultEl.textContent = "";
   if (output) output.innerHTML = "";
   const jf = document.getElementById("jobForm");
   if (jf && typeof jf.reset === "function") jf.reset();
+  lastJobId = null;
 }
 
 let token = localStorage.getItem("jwt") || null;
@@ -59,7 +62,6 @@ function renderAuth() {
 }
 
 function toast(msg) {
-  // tiny helper
   console.log(msg);
   alert(msg);
 }
@@ -73,10 +75,21 @@ document.addEventListener("click", (e) => {
     renderAuth();
     toast("Logged out");
   }
+
+  if (target && target.id === "downloadBtn") {
+    onDownloadClicked().catch(() => toast("Failed to get download link."));
+  }
 });
 
 ensureTokenFresh();
 renderAuth();
+
+async function safeJson(res) {
+  return res
+    .clone()
+    .json()
+    .catch(() => ({}));
+}
 
 // ---- SIGN UP ----
 $("#signupForm").addEventListener("submit", async (e) => {
@@ -94,7 +107,6 @@ $("#signupForm").addEventListener("submit", async (e) => {
 
   if (res.ok) {
     toast("Signup successful! Check email for the confirmation code.");
-    // Prefill confirm form’s username to reduce typing
     $("#cUsername").value = body.username;
     $("#cCode").focus();
   } else {
@@ -118,7 +130,6 @@ $("#confirmForm").addEventListener("submit", async (e) => {
 
   if (res.ok) {
     toast("Email confirmed! You can now log in.");
-    // Move focus to login form for convenience
     $("#username").value = body.username;
     $("#password").focus();
   } else {
@@ -178,7 +189,6 @@ $("#jobForm").addEventListener("submit", async (e) => {
   });
 
   if (res.status === 401) {
-    // token is invalid/expired — clear it and update UI
     localStorage.removeItem("jwt");
     token = null;
     clearJobUI();
@@ -187,21 +197,47 @@ $("#jobForm").addEventListener("submit", async (e) => {
   }
 
   const data = await safeJson(res);
-  jobResultEl.textContent = JSON.stringify(data, null, 2);
+  // jobResultEl.textContent = JSON.stringify(data, null, 2);
 
   if (res.ok) {
-    const url = data?.output?.url ?? (data?.output?.imageId ? `/v1/images/${data.output.imageId}` : null);
-    output.innerHTML = url ? `<img src="${url}" alt="result" />` : "Job created, but no output URL yet.";
+    lastJobId = data?.id || null;
+
+    const url =
+      data?.output?.url ??
+      (data?.output?.imageId ? `/v1/images/${data.output.imageId}` : null);
+
+    // show preview (if URL) + a Download button that calls our new API route
+    output.innerHTML = `
+      ${url ? `<img src="${url}" alt="result" />` : "Job created, but no output URL yet."}
+      <div style="margin-top:8px">
+        <button id="downloadBtn" ${lastJobId ? "" : "disabled"}>Download Output</button>
+      </div>
+    `;
   } else {
     output.textContent = "Job failed.";
   }
 });
 
-function safeJson(res) {
-  return res
-    .clone()
-    .json()
-    .catch(() => ({}));
+async function onDownloadClicked() {
+  if (!token) {
+    toast("Login first");
+    return;
+  }
+  if (!lastJobId) {
+    toast("No job to download yet.");
+    return;
+  }
+
+  const res = await fetch(`/v1/jobs/${lastJobId}/download`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const err = await safeJson(res);
+    toast("Failed to get download link: " + (err?.error?.message ?? res.statusText));
+    return;
+  }
+  const data = await res.json();
+  window.open(data.downloadUrl, "_blank");
 }
 
 if (!token) {

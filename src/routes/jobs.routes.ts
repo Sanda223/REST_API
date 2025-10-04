@@ -51,7 +51,6 @@ r.post("/", requireAuth, async (req, res, next) => {
       ops,
       status: sourceId === "seed" ? "processing" : "waiting_upload",
       createdAt: new Date().toISOString(),
-      // store S3 keys in your JSON store for now (DynamoDB later)
       inputKey,
       outputKey,
     } as any;
@@ -101,6 +100,14 @@ r.post("/:id/process", requireAuth, async (req, res, next) => {
   try {
     const job = await getJobById(req.params.id);
     if (!job) return res.status(404).json({ error: { code: "not_found" } });
+
+    // only owner can process
+    const user = (req as any).user || {};
+    const userId = user.sub ?? user.username ?? "unknown";
+    if (job.userId !== userId) {
+      return res.status(403).json({ error: { code: "forbidden" } });
+    }
+
     if (job.status !== "waiting_upload" && job.status !== "failed") {
       return res
         .status(400)
@@ -113,6 +120,33 @@ r.post("/:id/process", requireAuth, async (req, res, next) => {
 
     const downloadUrl = await presignDownload(job.outputKey!);
     res.json({ id: job.id, output: { imageId: job.id, url: downloadUrl } });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/**
+ * NEW: Get a pre-signed download URL for an output
+ * GET /v1/jobs/:id/download
+ */
+r.get("/:id/download", requireAuth, async (req, res, next) => {
+  try {
+    const job = await getJobById(req.params.id);
+    if (!job) return res.status(404).json({ error: { code: "not_found" } });
+
+    // only owner can download
+    const user = (req as any).user || {};
+    const userId = user.sub ?? user.username ?? "unknown";
+    if (job.userId !== userId) {
+      return res.status(403).json({ error: { code: "forbidden" } });
+    }
+
+    if (job.status !== "done" || !job.outputKey) {
+      return res.status(400).json({ error: { code: "bad_state", message: "Output not ready" } });
+    }
+
+    const url = await presignDownload(job.outputKey);
+    res.json({ downloadUrl: url });
   } catch (e) {
     next(e);
   }
